@@ -1,0 +1,110 @@
+══════════════════════════════════════════
+              BASIC GIT
+══════════════════════════════════════════
+
+git init
+→ Initialize Git repository
+
+git status
+→ Check current Git state
+
+git add .
+→ Stage all changes
+
+git add <file>
+→ Stage specific file
+
+git commit -m "message"
+→ Create commit from staged changes
+
+git log
+→ Full commit history
+
+git log --oneline
+→ Compact commit history
+
+git diff
+→ Show unstaged changes
+
+git diff --staged
+→ Show staged changes
+
+
+══════════════════════════════════════════
+          UNDO / RESTORE
+══════════════════════════════════════════
+
+git restore <file>
+→ Discard unstaged changes
+
+git restore --staged <file>
+→ Unstage file, KEEP changes
+
+git reset <file>
+→ Unstage file
+
+git reset --soft HEAD~1
+→ Undo commit, KEEP changes staged
+
+git reset HEAD~1
+→ Undo commit, KEEP changes unstaged
+
+git reset --hard HEAD~1
+→ Undo commit AND discard changes ☠️
+
+
+══════════════════════════════════════════
+              BRANCHES
+══════════════════════════════════════════
+
+git branch
+→ List branches
+
+git switch -c <branch>
+→ Create + switch to branch
+
+git switch <branch>
+→ Switch branch
+
+git merge <branch>
+→ Merge branch into current branch
+
+
+══════════════════════════════════════════
+              STASH
+══════════════════════════════════════════
+
+git stash
+→ Temporarily store uncommitted changes
+
+git stash list
+→ Show stored stashes
+
+git stash pop
+→ Restore latest stash + remove it
+
+git stash apply
+→ Restore latest stash + keep it
+
+
+══════════════════════════════════════════
+           GITHUB / REMOTE
+══════════════════════════════════════════
+
+git clone <url>
+→ Download repository
+
+git remote -v
+→ Show remote repositories
+
+git remote add origin <url>
+→ Connect local repo to GitHub
+
+git push origin main
+→ Upload commits to GitHub
+
+git pull origin main
+→ Download + integrate remote changes
+
+git fetch
+→ Download remote information without merging
