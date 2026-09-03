@@ -75,7 +75,7 @@ def login(user:UserLogin, db:Session=Depends(get_db)):
     }
 
 @router.get('/profile')
-def profile(current_user:User=Depends(get_current_user)): #Runs Dependy injection to extract token
+def profile(current_user:User=Depends(get_current_user)): #Runs Dependency injection to extract token
     return{
         'id': current_user.id,
         'email':current_user.email,
