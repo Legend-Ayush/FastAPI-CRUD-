@@ -11,7 +11,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     hash_password: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), 
+        DateTime(timezone=True), #handles timezone-aware datetime values
         default=lambda: datetime.now(timezone.utc)
     )
     

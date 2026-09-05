@@ -11,7 +11,7 @@ from app.database import get_db
 
 SECRET_KEY=""
 ALGORITHM="HS256"
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto') #Deprecated means that the scheme is no longer recommended for use and may be removed in future versions of the library. The 'auto' option allows Passlib to automatically select the best available scheme for hashing passwords, based on the current environment and available libraries.
 
 oauth2_scheme=OAuth2PasswordBearer(tokenUrl='/login') #extracts token from the profile
 

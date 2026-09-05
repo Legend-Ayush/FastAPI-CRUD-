@@ -71,7 +71,7 @@ def login(user:UserLogin, db:Session=Depends(get_db)):
     return{
         'message':'Login Successfully',
         'access_token':access_token,
-        'token_type':'bearer'
+        'token_type':'bearer' # Here, 'bearer' indicates that the token is a bearer token, which means that the client must include it in the Authorization header of subsequent requests to access protected resources.
     }
 
 @router.get('/profile')

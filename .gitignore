@@ -1,5 +1,6 @@
 # Database
 database.db
+test_database.db
 *.db
 
 # Virtual environment
@@ -12,3 +13,6 @@ __pycache__/
 
 # Environment variables
 .env
+
+#Practice tests
+tests/
