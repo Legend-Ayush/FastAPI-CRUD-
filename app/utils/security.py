@@ -34,17 +34,17 @@ def create_access_token(data:dict):
     
     return token
 
-def get_current_user(token:str=Depends(oauth2_scheme), db:Session=Depends(get_db)):
+def get_current_user(token:str=Depends(oauth2_scheme), db:Session=Depends(get_db)): #outh2_scheme is a dependency that extracts the token from the request header and passes it to the function as the token parameter.
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
+        headers={"WWW-Authenticate": "Bearer"}, #Specifies that the server expects the client to provide a bearer token in the Authorization header of the request. The client should include the token in the following format: "Authorization: Bearer <token>".
     )
     try:
         payload=jwt.decode(token, 
                            SECRET_KEY, 
                            algorithms=[ALGORITHM]
-                        )
+                        ) #payload is a dictionary that contains the claims of the token, such as the user ID, expiration time, and any other custom claims that were added when the token was created.
         id=payload.get("sub")
         
         if not id:
@@ -70,5 +70,12 @@ def get_current_user(token:str=Depends(oauth2_scheme), db:Session=Depends(get_db
     
     except JWTError:
         raise credentials_exception
+    
+    """
+    Extracts bearer token from the request header -> Verify/Decode the token through JWT -> 
+    Extracts user ID from token payload -> Query the database to find the user with extracted ID -> 
+    Checks validity of the account -> Return the user object if all checks pass, 
+    """
+    
         
             
