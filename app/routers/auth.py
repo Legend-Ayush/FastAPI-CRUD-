@@ -82,28 +82,38 @@ def profile(current_user:User=Depends(get_current_user)): #Runs Dependency injec
         'name':current_user.name
     }
 
-@router.delete('/Deletion',response_model=DeleteUserResponse, status_code=status.HTTP_200_OK)
-def deletion(current_user:User=Depends(get_current_user), db:Session=Depends(get_db)):
-    user_name=current_user.name
-    
-    deletion_target=datetime.now(timezone.utc) + timedelta(days=30)
-    try:
-        current_user.is_deleted=True
-        current_user.schedule_delete_at = deletion_target
-        
-        db.commit()
-        
-        formatted_date = deletion_target.strftime('%Y-%m-%d %H:%M:%S UTC')
-        return DeleteUserResponse(
-            message=f"{current_user.name} account schedule for deletion at {formatted_date}",
-            user_name=current_user.name
+@router.delete("/delete", response_model=DeleteUserResponse, status_code=status.HTTP_200_OK
+)
+def delete(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Account already pending for deletion"
         )
-    
-    except SQLAlchemyError as e:
+
+    user_name = current_user.name
+
+    try:
+        current_user.is_deleted = True
+        current_user.schedule_delete_at = (
+            datetime.now(timezone.utc) + timedelta(days=30)
+        )
+
+        db.commit()
+        formatted_date = current_user.schedule_delete_at.strftime(
+            "%Y-%m-%d %H:%M:%S UTC"
+        )
+
+        return DeleteUserResponse(
+            message=f"Account deletion scheduled for {formatted_date}",
+            name=user_name
+        )
+
+    except SQLAlchemyError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Internal Server Error ! Could not delete user'   
+            detail="Could not schedule account deletion"
         )
 
 @router.patch('/update', status_code=status.HTTP_200_OK, response_model=UserResponse)
