@@ -117,47 +117,62 @@ def delete(current_user: User = Depends(get_current_user), db: Session = Depends
         )
 
 @router.patch('/update', status_code=status.HTTP_200_OK, response_model=UserResponse)
-def update_user(user_update:UserUpdate,
-                current_user:User=Depends(get_current_user),
-                db:Session=Depends(get_db)):
+def update(user_update:UserUpdate,
+            db:Session=Depends(get_db),
+            current_user:User=Depends(get_current_user)):
     
     if not verify_password(user_update.current_password, current_user.hash_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Current password is incorrect"
+            detail='Current password is incorrect'
         )
     
-    changes=user_update.model_dump(exclude_unset=True)
-    
-    if "email" in changes:
-        if changes["email"]!=current_user.email:
-            existing_user=db.query(User).filter(
-                User.email==changes["email"],
-                User.id!=current_user.id
-            ).first()
-            
-            if existing_user: 
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Email already in use by another user"
-                )
-        
-            current_user.email=changes["email"]
-    
-    if "new_password" in changes:
-        current_user.hash_password=hash_password(changes["new_password"])
-    
-    if "name" in changes:
-        current_user.name=changes["name"]
+    changes=user_update.model_dump(exclude_unset=True,
+                                   exclude={'current_password'}) #changes is the dictionary that contains only those fields provided by the user for updation.
     
     try:
+        if 'email' in changes:
+            if changes['email']==current_user.email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail='New email is the same as the current email'
+                )
+            
+            else:
+                existing_user=db.query(User).filter(User.email==changes['email'], User.id!=current_user.id).first()
+                if existing_user:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail='Email already in use by another account'
+                    )
+            
+            current_user.email=changes['email']
+        
+        if 'password' in changes:
+            if changes['password']==user_update.current_password:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail='New password must be different from current password'
+                )
+            current_user.hash_password=hash_password(changes['password'])
+        
+        if 'name' in changes:
+            current_user.name=changes['name']
+        
         db.commit()
         db.refresh(current_user)
+        
         return current_user
     
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update user profile"
+            detail="Can't update user"
         )
+    '''
+    user_update:    Pydantic Object         ->  Informations provided by the client
+    current_user:   Sql Alchemy ORM object  ->  Actal row of authenticated user in the database
+    changes:        Python dictionary       ->  Fields client want to change
+    '''
+    
