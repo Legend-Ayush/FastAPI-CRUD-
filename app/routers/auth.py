@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse, UserLogin, DeleteUserResponse, UserUpdate
+from app.schemas.user import UserCreate, UserResponse, UserLogin, DeleteUserResponse, UserUpdate, UserReactivate
 from app.utils.security import hash_password, verify_password, create_access_token, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -175,4 +175,43 @@ def update(user_update:UserUpdate,
     current_user:   Sql Alchemy ORM object  ->  Actal row of authenticated user in the database
     changes:        Python dictionary       ->  Fields client want to change
     '''
-    
+
+@router.post("/reactivate",status_code=status.HTTP_200_OK,response_model=UserResponse)
+def reactivate(user_reactivate: UserReactivate,db: Session = Depends(get_db)):
+    delete_user = db.query(User).filter(
+        User.email == user_reactivate.email,
+        User.is_deleted == True,
+        User.schedule_delete_at > datetime.now(timezone.utc) #deadline > now -> Deadline is in the future
+    ).first()
+
+    if not delete_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Account not found or cannot be reactivated"
+        )
+
+    if not verify_password(
+        user_reactivate.current_password,
+        delete_user.hash_password
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials"
+        )
+
+    delete_user.is_deleted = False
+    delete_user.schedule_delete_at = None
+
+    try:
+        db.commit()
+        db.refresh(delete_user)
+
+        return delete_user
+
+    except SQLAlchemyError:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database server Error! Can't reactivate user"
+        )

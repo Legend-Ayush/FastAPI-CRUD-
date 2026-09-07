@@ -37,3 +37,7 @@ class UserUpdate(BaseModel):
     name: NormalizedName | None = None
     email: NormalizedEmail | None = None
     new_password:str | None = None
+
+class UserReactivate(BaseModel):
+    email:Annotated[EmailStr, BeforeValidator(lambda v: v.strip().lower())]
+    current_password:str
