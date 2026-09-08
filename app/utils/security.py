@@ -9,73 +9,149 @@ from app.models.user import User
 from app.database import get_db
 
 
-SECRET_KEY=""
-ALGORITHM="HS256"
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto') #Deprecated means that the scheme is no longer recommended for use and may be removed in future versions of the library. The 'auto' option allows Passlib to automatically select the best available scheme for hashing passwords, based on the current environment and available libraries.
+SECRET_KEY = ""
+ALGORITHM = "HS256"
 
-oauth2_scheme=OAuth2PasswordBearer(tokenUrl='/login') #extracts token from the profile
+pwd_context = CryptContext(
+    schemes=['bcrypt'],
+    deprecated='auto'
+) #Deprecated means that the scheme is no longer recommended for use and may be removed in future versions of the library. The 'auto' option allows Passlib to automatically select the best available scheme for hashing passwords, based on the current environment and available libraries.
+
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl='/auth/login'
+) #extracts token from the profile
 
 
 def hash_password(plain_password: str) -> str:
     return pwd_context.hash(plain_password)
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
-def create_access_token(data:dict):
-    to_encode=data.copy()
-    expire=datetime.now(timezone.utc)+timedelta(minutes=30)
-    
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+    )
+
     to_encode.update({
-        'exp':expire
+        'type': 'access',
+        'exp': expire
     })
-    
-    token=jwt.encode(to_encode, SECRET_KEY, ALGORITHM)
-    
+
+    token = jwt.encode(
+        to_encode,
+        SECRET_KEY,
+        algorithm=ALGORITHM
+    )
+
     return token
 
-def get_current_user(token:str=Depends(oauth2_scheme), db:Session=Depends(get_db)): #outh2_scheme is a dependency that extracts the token from the request header and passes it to the function as the token parameter.
+
+def create_refresh_token(data: dict):
+    to_encode = data.copy()
+
+    expire = datetime.now(timezone.utc) + timedelta(
+        days=REFRESH_TOKEN_EXPIRE_DAYS
+    )
+
+    to_encode.update({
+        'type': 'refresh',
+        'exp': expire
+    })
+
+    token = jwt.encode(
+        to_encode,
+        SECRET_KEY,
+        algorithm=ALGORITHM
+    )
+
+    return token
+
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+): #outh2_scheme is a dependency that extracts the token from the request header and passes it to the function as the token parameter.
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"}, #Specifies that the server expects the client to provide a bearer token in the Authorization header of the request. The client should include the token in the following format: "Authorization: Bearer <token>".
     )
+
     try:
-        payload=jwt.decode(token, 
-                           SECRET_KEY, 
-                           algorithms=[ALGORITHM]
-                        ) #payload is a dictionary that contains the claims of the token, such as the user ID, expiration time, and any other custom claims that were added when the token was created.
-        id=payload.get("sub")
-        
-        if not id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
-            )
-        
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        ) #payload is a dictionary that contains the claims of the token, such as the user ID, expiration time, and any other custom claims that were added when the token was created.
+
+        id = payload.get("sub")
+        token_type = payload.get("type")
+
+        if not id or token_type != "access":
+            raise credentials_exception
+
         #finding user
-        user=db.query(User).filter(User.id==int(id)).first()
+        user = db.query(User).filter(
+            User.id == int(id)
+        ).first()
+
         if not user:
-                raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
-            )
-        
+            raise credentials_exception
+
         if user.is_deleted:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Account is pending deletion. Please log in again to reactivate."
             )
+
         return user
-    
+
     except JWTError:
         raise credentials_exception
-    
-    """
-    Extracts bearer token from the request header -> Verify/Decode the token through JWT -> 
-    Extracts user ID from token payload -> Query the database to find the user with extracted ID -> 
-    Checks validity of the account -> Return the user object if all checks pass, 
-    """
-    
-        
-            
+
+
+def get_refresh_token(
+    token: str = Depends(oauth2_scheme)
+):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate refresh token",
+        headers={"WWW-Authenticate": "Bearer"}
+    )
+
+    try:
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+
+        id = payload.get("sub")
+        token_type = payload.get("type")
+
+        if not id or token_type != "refresh":
+            raise credentials_exception
+
+        return {
+            "token": token,
+            "user_id": id
+        }
+
+    except JWTError:
+        raise credentials_exception
+
+
+"""
+Extracts bearer token from the request header -> Verify/Decode the token through JWT ->
+Extracts user ID from token payload -> Query the database to find the user with extracted ID ->
+Checks validity of the account -> Return the user object if all checks pass,
+"""

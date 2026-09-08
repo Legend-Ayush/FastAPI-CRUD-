@@ -1,19 +1,80 @@
+from app.tests.test_db import Base
 from datetime import datetime, timezone
-from sqlalchemy import DateTime, Integer, String, Boolean
+from sqlalchemy import DateTime, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
-from app.database import Base
+
 
 class User(Base):
-    __tablename__ = 'customer'
-    
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String(100))
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    hash_password: Mapped[str] = mapped_column(String(255))
+    __tablename__ = "customer"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(100)
+    )
+
+    email: Mapped[str] = mapped_column(
+        String(255),
+        unique=True,
+        index=True
+    )
+
+    hash_password: Mapped[str] = mapped_column(
+        String(255)
+    )
+
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), #handles timezone-aware datetime values
+        DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc)
     )
-    
-    is_deleted:Mapped[bool] = mapped_column(Boolean, default=False)
-    schedule_delete_at:Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False
+    )
+
+    schedule_delete_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("customer.id"),
+        nullable=False,
+        index=True
+    )
+
+    token: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False
+    )
+
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False
+    )
+
+    is_revoked: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
