@@ -14,7 +14,8 @@ from app.schemas.user import (
     UserUpdate,
     UserReactivate,
     TokenResponse,
-    RefreshResponse
+    RefreshResponse,
+    LogoutResponse
 )
 from app.utils.security import (
     hash_password,
@@ -388,3 +389,40 @@ def refresh(
         "access_token": access_token,
         "token_type": "bearer"
     }
+
+@router.post("/logout", response_model=LogoutResponse)
+def logout(
+    refresh_data: dict = Depends(get_refresh_token),
+    db: Session = Depends(get_db)
+):
+    stored_token = db.query(RefreshToken).filter(
+        RefreshToken.token == refresh_data["token"],
+        RefreshToken.user_id == int(refresh_data["user_id"])
+    ).first()
+
+    if not stored_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
+
+    if stored_token.is_revoked:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has already been revoked"
+        )
+
+    stored_token.is_revoked = True
+
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not logout"
+        )
+
+    return {
+        "message": "Logout successful"
+        }
