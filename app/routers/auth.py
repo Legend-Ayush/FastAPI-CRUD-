@@ -228,11 +228,15 @@ def update(
         exclude_unset=True,
         exclude={'current_password'}
     ) #changes is the dictionary that contains only those fields provided by the user for updation.
+    
+    if not changes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields provided for update"
+        )
 
     try:
-
         if 'email' in changes:
-
             if changes['email'] == current_user.email:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -249,17 +253,14 @@ def update(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail='Email already in use by another account'
                 )
-
             current_user.email = changes['email']
 
         if 'new_password' in changes:
-
             if changes['new_password'] == user_update.current_password:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail='New password must be different from current password'
                 )
-
             current_user.hash_password = hash_password(
                 changes['new_password']
             )
