@@ -1,3 +1,4 @@
+import math
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
@@ -15,7 +16,8 @@ from app.schemas.user import (
     UserReactivate,
     TokenResponse,
     RefreshResponse,
-    LogoutResponse
+    LogoutResponse,
+    UserPaginationResponse
 )
 from app.utils.security import (
     hash_password,
@@ -428,12 +430,21 @@ def logout(
         "message": "Logout successful"
         }
 
-@router.get('/users')
+@router.get('/users', response_model=UserPaginationResponse)
 def users(db:Session=Depends(get_db),
           page_num:int=Query(1, ge=1),
           limit:int=Query(10, ge=1, le=100)):
     
+    total=db.query(User).count()
+    
     offset=(page_num-1)*limit
     users=db.query(User).offset(offset).limit(limit).all()
+    pages=math.ceil(total/limit)
     
-    return users
+    return {
+        'items':users,
+        'page':page_num,
+        'limit':limit,
+        'total_records':total,
+        'pages':pages
+    }

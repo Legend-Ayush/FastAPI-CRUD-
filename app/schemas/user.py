@@ -91,3 +91,10 @@ class RefreshResponse(BaseModel):
 
 class LogoutResponse(BaseModel):
     message: str
+    
+class UserPaginationResponse(BaseModel):
+    items:list[UserResponse]
+    page:int
+    limit:int
+    total_records:int
+    pages:int
