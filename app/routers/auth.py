@@ -430,16 +430,22 @@ def logout(
         "message": "Logout successful"
         }
 
-@router.get('/users', response_model=UserPaginationResponse)
+@router.get('/users', response_model=UserPaginationResponse, status_code=status.HTTP_200_OK)
 def users(db:Session=Depends(get_db),
           page_num:int=Query(1, ge=1),
           limit:int=Query(10, ge=1, le=100)):
     
     total=db.query(User).count()
+    pages=math.ceil(total/limit)
+    
+    if page_num>pages:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Page number exceeds total number of pages: Total pages:{pages}'
+        )
     
     offset=(page_num-1)*limit
     users=db.query(User).offset(offset).limit(limit).all()
-    pages=math.ceil(total/limit)
     
     return {
         'items':users,
