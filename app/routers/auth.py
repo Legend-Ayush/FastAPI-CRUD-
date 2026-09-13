@@ -433,7 +433,31 @@ def logout(
 @router.get('/users', response_model=UserPaginationResponse, status_code=status.HTTP_200_OK)
 def users(db:Session=Depends(get_db),
           page_num:int=Query(1, ge=1),
-          limit:int=Query(10, ge=1, le=100)):
+          limit:int=Query(10, ge=1, le=100),
+          sort_by:str=Query('id'),
+          order:str=Query('desc')):
+    
+    allowed_sort_fields={
+        'id':User.id,
+        'username':User.name,
+        'email':User.email
+    }
+    if sort_by not in allowed_sort_fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Invalid sort field'
+        )
+        
+    sort_column=allowed_sort_fields[sort_by]
+    if order=='asc':
+        sort_column=sort_column.asc()
+    elif order=='desc':
+        sort_column=sort_column.desc()
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Order must be 'asc' or 'desc'"
+        )
     
     total=db.query(User).count()
     pages=math.ceil(total/limit)
@@ -445,7 +469,12 @@ def users(db:Session=Depends(get_db),
         )
     
     offset=(page_num-1)*limit
-    users=db.query(User).offset(offset).limit(limit).all()
+    users=(db.query(User).
+           order_by(sort_column).
+           offset(offset).
+           limit(limit).
+           all()
+    )
     
     return {
         'items':users,
