@@ -1,4 +1,4 @@
-from app.tests.test_db import Base
+from app.database import Base
 from datetime import datetime, timezone
 from sqlalchemy import DateTime, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column

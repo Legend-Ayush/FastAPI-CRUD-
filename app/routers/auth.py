@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -427,3 +427,13 @@ def logout(
     return {
         "message": "Logout successful"
         }
+
+@router.get('/users')
+def users(db:Session=Depends(get_db),
+          page_num:int=Query(1, ge=1),
+          limit:int=Query(10, ge=1, le=100)):
+    
+    offset=(page_num-1)*limit
+    users=db.query(User).offset(offset).limit(limit).all()
+    
+    return users
