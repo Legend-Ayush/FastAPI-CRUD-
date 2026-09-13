@@ -1,5 +1,6 @@
 import math
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import Literal
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -434,30 +435,20 @@ def logout(
 def users(db:Session=Depends(get_db),
           page_num:int=Query(1, ge=1),
           limit:int=Query(10, ge=1, le=100),
-          sort_by:str=Query('id'),
-          order:str=Query('desc')):
+          sort_by:Literal['id','name','email']='id',
+          order:Literal['asc','desc']='desc'):
     
     allowed_sort_fields={
         'id':User.id,
-        'username':User.name,
+        'name':User.name,
         'email':User.email
     }
-    if sort_by not in allowed_sort_fields:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Invalid sort field'
-        )
         
     sort_column=allowed_sort_fields[sort_by]
     if order=='asc':
         sort_column=sort_column.asc()
-    elif order=='desc':
-        sort_column=sort_column.desc()
     else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Order must be 'asc' or 'desc'"
-        )
+        sort_column=sort_column.desc()
     
     total=db.query(User).count()
     pages=math.ceil(total/limit)
