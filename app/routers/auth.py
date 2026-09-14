@@ -436,7 +436,9 @@ def users(db:Session=Depends(get_db),
           page_num:int=Query(1, ge=1),
           limit:int=Query(10, ge=1, le=100),
           sort_by:Literal['id','name','email']='id',
-          order:Literal['asc','desc']='desc'):
+          order:Literal['asc','desc']='desc',
+          name:str|None=Query(None),
+          email:str|None=Query(None)):
     
     allowed_sort_fields={
         'id':User.id,
@@ -450,7 +452,13 @@ def users(db:Session=Depends(get_db),
     else:
         sort_column=sort_column.desc()
     
-    total=db.query(User).count()
+    query=db.query(User)
+    if name:
+        query=query.filter(User.name==name)
+    if email:
+        query=query.filter(User.email==email)
+        
+    total=query.count()
     pages=math.ceil(total/limit)
     
     if page_num>pages:
@@ -460,7 +468,7 @@ def users(db:Session=Depends(get_db),
         )
     
     offset=(page_num-1)*limit
-    users=(db.query(User).
+    users=(query.
            order_by(sort_column).
            offset(offset).
            limit(limit).
